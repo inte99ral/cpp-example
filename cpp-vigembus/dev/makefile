@@ -11,7 +11,7 @@ default: all
 ## Variable ======================================================
 
 ### Files
-OUTPUT   := output.exe
+OUTPUT   := main.exe
 SRCS     := $(wildcard src/*.cpp src/*/*.cpp main.cpp)
 OBJS     := $(SRCS:%.cpp=build/%.o)
 
@@ -33,23 +33,17 @@ CXXFLAGS := -O2 \
 			-std=gnu++17
 
 #### g++ > 전처리단계 헤더 경로 추가
-# * -I"include"                                   | Local
-# * -I"D:/Program Files/boost/include/boost-1_87" | Boost
+# * -I"include"                                              | Local
+# * -I"D:/Program Files/ViGEm/ViGEmClient-1.16.18.0/include" | ViGEm
 CXXINCS  := -I"include" \
-			-I"D:/Program Files/boost/include/boost-1_87" # * Boost
+			-I"D:/Program Files/ViGEm/ViGEmClient-1.16.18.0/include"
 
 #### 링킹단계 라이브러리 경로 추가
-# * -L"lib"                        | Local
-# * -L"D:/Program Files/boost/lib" | Boost
-CXXLIBS  := -L"lib" \
-			-L"D:/Program Files/boost/lib"
+# * -L"lib"                                              | Local
+CXXLIBS  := -L"lib"
 
 #### 링킹단계 라이브러리 링크, -lX 은 libX.so 또는 libX.a 를 의미
-CXXLINKS := -lm \
-			-lboost_system-mgw14-mt-d-x64-1_87\
-			-lboost_thread-mgw14-mt-d-x64-1_87\
-			-lwsock32 \
-			-lws2_32
+CXXLINKS := -lm
 
 ## Target ========================================================
 

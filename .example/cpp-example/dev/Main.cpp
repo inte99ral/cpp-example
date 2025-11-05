@@ -8,7 +8,7 @@
 
 using namespace std;
 
-int main() {
+int main(int argc, char* argv[]) {
     TestSceneObject *sceneObj = new TestSceneObject();
     delete sceneObj;
 
