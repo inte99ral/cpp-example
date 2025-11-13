@@ -1,0 +1,118 @@
+# Makefile
+
+## Default Setting ===============================================
+
+### .PHONY 타겟 선언 (실제 파일과 구분)
+.PHONY: default all run clean
+
+### 기본 타겟 설정
+default: test
+
+## Variable ======================================================
+
+### Files
+OUTPUT   := main.exe
+SRCS     := $(wildcard src/*.cpp src/*/*.cpp main.cpp)
+OBJS     := $(SRCS:%.cpp=build/%.o)
+
+### g++
+
+#### g++ > 컴파일러 선택
+CXX      := g++
+
+#### g++ > 컴파일러 옵션 플래그
+# * -O2          | loop unrolling, function inlining, 메모리,속도희생 빼고 전부 최적화
+# * -Wall        | 모든 모호한 코딩에 대해서 경고를 보내는 옵션
+# * -g           | 디버깅 정보 포함
+# * -static      | 정적,공유 라이브러리 중 정적을 우선. 속도는 빠르나 파일 사이즈가 커짐
+# * -std=gnu++17 | C++17 Clang GNU 확장기능 유효
+# * -pthread     | GCC의 스레드 지원 모드 활성화
+CXXFLAGS := -O2 \
+			-Wall \
+			-g \
+			-std=gnu++17 \
+			-pthread
+
+#### g++ > 전처리단계 헤더 경로 추가
+# * -I"include"                                              | Local
+# * -I"D:/Program Files/ViGEm/ViGEmClient-1.16.18.0/include" | ViGEm
+CXXINCS  := -I"include" \
+			-I"D:/Program Files/ViGEm/ViGEmClient-1.16.18.0/include"
+
+#### g++ > 링킹단계 라이브러리 경로 추가
+# * -L"lib"                                              | Local
+CXXLIBS  := -L"lib"
+
+#### g++ > 링킹단계 라이브러리 링크, -lX 은 libX.so 또는 libX.a 를 의미
+# * -lm          | Math 라이브러리
+# * -lsetupapi   | SetupAPI 라이브러리
+CXXLINKS := -lm \
+			-lsetupapi
+
+#### g++ > 외부 라이브러리 소스코드
+# * "D:/Program Files/ViGEm/ViGEmClient-1.16.18.0/src/ViGEmClient.cpp" | ViGEm
+CXXLSRCS := "D:/Program Files/ViGEm/ViGEmClient-1.16.18.0/src/ViGEmClient.cpp"
+
+## TEST ==========================================================
+
+# E:/example/example.cpp -> build/E_example_example.o
+
+# define transform_external_path
+# $(BUILD_DIR)/$(subst /,,$(subst :,_,,$(subst /,,$(1))))
+# enddefine
+
+# CXXLPATH := $(CXXLSRCS:%.cpp=%)
+
+# (subst 함수를 중첩하여 사용)
+CXXLPATH := $(subst :,_,$(CXXLSRCS:%.cpp=%))
+# 3. .o 확장자 추가 및 build/ 경로 접두사 추가
+EXT_OBJS := $(addprefix build/ext/,$(EXT_OBJS_PATH).o)
+
+# 최종 모든 객체 파일 목록
+# ALL_OBJS := $(OBJS) $(EXT_OBJS)
+
+define check_special_prefix
+    $(shell echo "$1" | grep -E '^[A-Z]_/' > /dev/null && echo 1 || echo)
+endef
+
+define conditional_dependency
+    # check_special_prefix 함수의 결과가 1 (참) 이면 ext/$1.cpp 사용, 아니면 $1.cpp 사용
+    $(if $(call check_special_prefix, $1),\
+        ext/$1.cpp,\
+        $1.cpp)
+endef
+
+test:
+	@ECHO $(CXXLPATH)
+
+# build/%.o 타겟 정의. 의존성은 $(call conditional_dependency, $*) 함수를 통해 동적으로 결정됩니다.
+build/%.o: $(call conditional_dependency, $*)
+	@echo "--- 타겟 $@ 빌드 시작 ---"
+	@echo "1. 현재 Stem (\$*): $*"
+	@echo "2. 조건 일치 여부 (1=특수 경로): $(call check_special_prefix, $*)"
+	@echo "3. 최종 의존성 (\$^) : $^"
+	# 여기에 실제 컴파일 명령을 넣습니다. (예: g++ -c $^ -o $@)
+	@touch $@ # 빌드 완료 시 더미 파일 생성 (테스트용)
+
+
+## Target ========================================================
+
+### 기본 타겟: 실행 파일 생성
+all: $(OUTPUT)
+
+### 링크단계 실행 파일 빌드
+$(OUTPUT): $(OBJS)
+	$(CXX) $^ -o $@ $(CXXFLAGS) $(CXXLIBS) $(CXXLINKS)
+
+#### 전처리단계 오브젝트 파일 생성
+build/%.o: %.cpp
+	@IF NOT EXIST "$(subst /,\,$(dir $@))" MKDIR "$(subst /,\,$(dir $@))"
+	$(CXX) $< -o $@ -c $(CXXFLAGS) $(CXXINCS)
+
+run: all
+	cmd /c chcp 65001>nul && $(OUTPUT)
+# * "@./$(OUTPUT)" 으로 즉시 구동해도 되나, 유니코드 문제 해결을 위해 우회함
+
+clean:
+	@IF EXIST $(OUTPUT) DEL /Q $(OUTPUT)
+	@IF EXIST "build" RMDIR /S /Q "build"

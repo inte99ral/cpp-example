@@ -1,0 +1,82 @@
+# Makefile
+
+## Default Setting ===============================================
+
+### .PHONY 타겟 선언 (실제 파일과 구분)
+.PHONY: default test
+
+### 기본 타겟 설정
+default: test
+
+## Variable ======================================================
+
+### Files
+OUTPUT   := main.exe
+SRCS     := $(wildcard src/*.cpp src/*/*.cpp main.cpp)
+OBJS     := $(SRCS:%.cpp=build/%.o)
+
+# define check_special_prefix
+#     $(shell echo "$1" | grep -E '^[A-Z]_/' > /dev/null && echo 1 || echo)
+# endef
+
+# define conditional_dependency
+#     # check_special_prefix 함수의 결과가 1 (참) 이면 ext/$1.cpp 사용, 아니면 $1.cpp 사용
+#     $(if $(call check_special_prefix, $1),\
+#         ext/$1.cpp,\
+#         $1.cpp)
+# endef
+
+# * foreach 문 예시
+# $(foreach S, $(SOURCES), $(eval $(call DEFINE_RULE, $(S))))
+
+# $(foreach SRC,$(EXT_SRCS),\
+#     $(eval $(call COMPILE_EXTERNAL_RULE, $(SRC), $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(subst /,_,$(subst :,_,$(SRC))))))\
+# )
+
+arr := A B C
+
+# foreach 함수를 사용하여 각 요소에 대해 echo 명령을 생성하고 세미콜론으로 연결
+# 이 결과는 'echo A; echo B; echo C;' 와 같은 하나의 긴 문자열이 됨.
+ECHO_COMMANDS := $(foreach i, $(arr) ,echo $(i);)
+
+print_foreach:
+	@$(ECHO_COMMANDS)
+
+# 또는 직접 레시피 내에서 사용
+print_inline:
+	@$(foreach item,$(alp),echo $(item) ;)
+
+.PHONY: print_foreach print_inline
+
+# * ==============================================================
+
+#### g++ > 외부 라이브러리 소스코드
+# * "D:/Program Files/ViGEm/ViGEmClient-1.16.18.0/src/ViGEmClient.cpp" | ViGEm
+CXXLSRCS := "D:/Program Files/ViGEm/ViGEmClient-1.16.18.0/src/ViGEmClient.cpp"
+
+
+### 기본 타겟: 실행 파일 생성
+test: $(OUTPUT)
+	@ECHO "==== TEST ===="
+
+### 링크단계 실행 파일 빌드
+$(OUTPUT): $(OBJS)
+	@ECHO "==== OUT ===="
+
+# build/%.o: $(call test_dependency, $*)
+# 	@ECHO "build: $@"
+
+build/%.o: $(call test02_dependency, %)
+	@ECHO "build: $*"
+
+%.cpp:
+	@ECHO "cpp: $@"
+
+# build/%.o 타겟 정의. 의존성은 $(call conditional_dependency, $*) 함수를 통해 동적으로 결정됩니다.
+# build/%.o: $(call conditional_dependency, $*)
+# 	@echo "--- 타겟 $@ 빌드 시작 ---"
+# 	@echo "1. 현재 Stem (\$*): $*"
+# 	@echo "2. 조건 일치 여부 (1=특수 경로): $(call check_special_prefix, $*)"
+# 	@echo "3. 최종 의존성 (\$^) : $^"
+# 	# 여기에 실제 컴파일 명령을 넣습니다. (예: g++ -c $^ -o $@)
+# 	@touch $@ # 빌드 완료 시 더미 파일 생성 (테스트용)

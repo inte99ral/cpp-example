@@ -5,51 +5,6 @@
         // # Build & Compile
 
         // ## C++ ====================================================================
-        // ### [ ] C++：CMD：단일파일 빌드 (백준 채점용)
-        {
-            "label": "C++：백준 풀이 빌드",
-            "detail": "백준 C++17 표준옵션으로 컴파일합니다.",
-            "type": "cppbuild",
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            },
-            "command": "g++",
-            "args": [
-                "${file}",
-                "-o",
-                "${fileDirname}\\${fileBasenameNoExtension}.exe",
-                "-O2", // loop unrolling, function inlining, 메모리 및 속도희생을 제외한 모든 범위 최적화
-                "-Wall", // 모든 모호한 코딩에 대해서 경고를 보내는 옵션
-                "-lm", // math libarary 사용
-                "-static", // 정적 라이브러리와 공유 라이브러리 중 정적을 우선한다. 속도는 빠르지만 파일 사이즈가 커짐
-                "-std=gnu++17", // C++17 Clang GNU 확장기능 유효
-                "-I",
-                "\"D:\\Program Files\\boost\\include\\boost-1_87\"",
-                "-L",
-                "\"D:\\Program Files\\boost\\lib\"",
-                "-lboost_system-mgw14-mt-d-x64-1_87",
-                "-lboost_thread-mgw14-mt-d-x64-1_87",
-                "-lwsock32",
-                "-lws2_32"
-            ],
-            "options": {
-                "cwd": "${fileDirname}"
-            },
-            "problemMatcher": {
-                "owner": "cpp",
-                "fileLocation": ["relative", "${workspaceRoot}"],
-                "pattern": {
-                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
-                    "file": 1,
-                    "line": 2,
-                    "column": 3,
-                    "severity": 4,
-                    "message": 5
-                }
-            }
-        },
-
         // ### [ ] C++：CMD：형식 예시
         {
             "label": "C++：CMD：형식 예시",
@@ -95,7 +50,7 @@
                 "-O2", //          | LoopUnrolling,FunctionInlining,메모리,속도 제외 최적화
                 "-Wall", //        | 모든 모호한 코딩에 대해서 경고
                 "-g", //           | 디버깅 정보 포함
-                "-static", //      | 공유보다 정적 우선. 속도 빠르나 파일이 커짐
+                "-static", //      | 공유 라이브러리보다 정적 우선. 속도 빠르나 파일이 커짐
                 "-std=gnu++17", // | C++17 Clang GNU 확장기능 유효
                 // ** g++ > 전처리단계 헤더 경로 추가
                 "-Iinclude", //                                       | Local
@@ -127,25 +82,6 @@
             }
         },
 
-        // ## Makefile ====================================================================
-
-        // ### [x] Makefile：Compile All
-        {
-            "label": "Makefile：Compile All",
-            "type": "shell",
-            "group": {
-                "isDefault": true,
-                // "isDefault": false,
-                "kind": "build"
-            },
-            "command": "mingw32-make",
-            "args": [],
-            "options": {
-                "cwd": "${fileDirname}"
-            },
-            "problemMatcher": []
-        },
-
         // # Test & Run
         // ## C++ =========================================================================
         // ### [x] C++：빌드된 .exe 파일 실행
@@ -159,42 +95,6 @@
                 "kind": "test"
             },
             "command": "${fileDirname}/${fileBasenameNoExtension}.exe"
-        },
-
-        // ## Makefile ====================================================================
-
-        // ### [x] Makefile：Run
-        {
-            "label": "Makefile：Run",
-            "type": "shell",
-            "group": {
-                "isDefault": true,
-                // "isDefault": false,
-                "kind": "test"
-            },
-            "command": "mingw32-make",
-            "args": ["run"],
-            "options": {
-                "cwd": "${fileDirname}"
-            },
-            "problemMatcher": []
-        },
-
-        // ### [x] Makefile：Clean
-        {
-            "label": "Makefile：Clean",
-            "type": "shell",
-            "group": {
-                "isDefault": true,
-                // "isDefault": false,
-                "kind": "test"
-            },
-            "command": "mingw32-make",
-            "args": ["clean"],
-            "options": {
-                "cwd": "${fileDirname}"
-            },
-            "problemMatcher": []
         }
     ]
 }

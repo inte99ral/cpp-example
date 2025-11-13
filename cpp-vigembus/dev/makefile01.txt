@@ -1,0 +1,83 @@
+# ===============================================
+# 1. 변수 설정
+# ===============================================
+
+CXX      := g++
+CXXFLAGS := -Wall -std=c++17 -I.
+BUILD_DIR := build
+# (나중에 사용할 경우) 최종 실행 파일 이름
+TARGET   := my_program
+
+# 프로젝트 내부 소스 파일 (프로젝트 루트의 .cpp 파일)
+SRCS     := $(wildcard *.cpp)
+
+# 프로젝트 외부 소스 파일 목록
+EXT_SRCS := E:/example/example.cpp F:/example/example.cpp
+
+# ===============================================
+# 2. 객체 파일 목록 생성 및 경로 변환
+# ===============================================
+
+# 내부 객체 파일: *.cpp -> build/%.o
+OBJS     := $(SRCS:%.cpp=$(BUILD_DIR)/%.o)
+
+# 외부 객체 파일 변환 함수
+# 경로를 유니크한 객체 파일 이름으로 변환합니다.
+# E:/example/example.cpp -> build/E_example_example.o
+define transform_external_path
+$(BUILD_DIR)/$(subst /,,$(subst :,_,,$(subst /,,$(1))))
+enddefine
+
+# 외부 객체 파일 목록 생성
+# 1. 파일 확장자 (.cpp) 제거
+EXT_NO_EXT := $(EXT_SRCS:%.cpp=%)
+# 2. ':' (드라이브 구분자)와 '/' (경로 구분자)를 '_'로 치환하여 경로 평탄화
+# (subst 함수를 중첩하여 사용)
+EXT_OBJS_PATH := $(subst /,_,$(subst :,_,$(EXT_NO_EXT)))
+# 3. .o 확장자 추가 및 build/ 경로 접두사 추가
+EXT_OBJS := $(addprefix $(BUILD_DIR)/,$(EXT_OBJS_PATH).o)
+
+# 최종 모든 객체 파일 목록
+ALL_OBJS := $(OBJS) $(EXT_OBJS)
+
+
+# ===============================================
+# 3. 규칙 (Rules)
+# ===============================================
+
+# 3-1. 기본 빌드 목표
+all: $(TARGET)
+
+# 3-2. 최종 실행 파일 링크 규칙
+$(TARGET): $(ALL_OBJS)
+	$(CXX) $(CXXFLAGS) $^ -o $@
+
+# 3-3. 내부 소스 컴파일 규칙 (일반적인 패턴 규칙)
+# %.o는 build/a.o를, %.cpp는 a.cpp를 의미
+$(BUILD_DIR)/%.o: %.cpp
+	@mkdir -p $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+# 3-4. 외부 소스 컴파일 규칙 (가장 중요한 부분)
+# 각 외부 객체 파일에 대해 명시적인 규칙을 정의합니다.
+$(foreach SRC,$(EXT_SRCS),\
+    $(eval $(call COMPILE_EXTERNAL_RULE,$(SRC),$(word $(shell echo $(shell echo $(EXT_SRCS) | tr ' ' '\n' | grep -n -w $(SRC) | cut -d: -f1), $(EXT_OBJS))))))
+
+# COMPILE_EXTERNAL_RULE 매크로 정의
+# $1: 원본 소스 경로 (e.g., E:/example/example.cpp)
+# $2: 변환된 객체 파일 경로 (e.g., build/E_example_example.o)
+define COMPILE_EXTERNAL_RULE
+$(2): $(1)
+	@mkdir -p $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -c $$< -o $$@
+endef
+
+# ===============================================
+# 4. 정리 (Clean)
+# ===============================================
+
+.PHONY: all clean
+
+clean:
+	rm -f $(TARGET)
+	rm -rf $(BUILD_DIR)

@@ -33,18 +33,212 @@
 
 > [!WARN]
 >
-> &nbsp; ViGEmClient 는 `<windows.h>` 에서 typedef 타입정의된 데이터타입을 사용합니다.
-> &nbsp; `#include <windows.h>` 를 반드시 먼저 선언해주어야 합니다.
+> &nbsp; ViGEmClient.cpp는 원래 Visual Studio 프로젝트용 코드(ViGEmClient.vcxproj)에서 빌드되도록 만들어졌습니다. MSVC(Visual Studio) 에서는 보통 문제가 안 되나 GCC/Clang 에서는 문제가 되는 구문들이 있기에 수정이 필요합니다.
+>
+> &nbsp; MSVC 에서는 <thread> 없이 <windows.h> 나 \_beginthreadex 등을 통해 thread 관련 코드가 자동 인식됩니다. GCC/MinGW 에서는 명시적으로 <thread>를 포함해야 합니다.
+>
+> &nbsp; MSVC 에서는 0 대신 NULL 을 써도 보통 문제가 안 됩니다. GCC/Clang 에서는 NULL이 단순히 0 또는 0L 로 정의되어, 포인터와 비교하거나 산술연산 시 “NULL used in arithmetic” 경고가 발생합니다.
+
+> [!WARN]
+>
+> &nbsp; ViGEmClient 는 `<windows.h>` 에서 typedef 타입정의된 데이터 타입을 사용합니다. `#include <windows.h>` 를 반드시 먼저 선언해주어야 합니다.
+>
+> &nbsp; ViGEmClient 는 `<thread>` 를 사용합니다. 컴파일 시에 GCC의 스레드 지원 모드 활성화 옵션 `-pthread` 을 넣어주어야 합니다.
+>
+> &nbsp; ViGEmClient 는 `SetupAPI` 를 사용합니다. 라이브러리 링킹 옵션인 `-lsetupapi` 을 넣어주어야 합니다.
 
 &nbsp;
+
+###
 
 ## 배포 시 주의점
 
 &nbsp; 사용자 모드(.exe)는 커널에 새 가상 HID 장치를 직접 등록할 권한이 없습니다. 사용자는 별도로 ViGEmBus 드라이버를 설치해야 합니다.
 
-&nbsp; `ViGEmBus 드라이버 설치 확인 + 자동 설치 유도 코드 (C++)` 코드를 추가해주면 사용자 편의성을 더할 수 있습니다.
+&nbsp; `ViGEmBus 드라이버 설치 확인 + 자동 설치 유도 코드` 코드를 추가해주면 사용자 편의성을 더할 수 있습니다.
 
--   당연히 프로젝트에 ViGEmClient SDK (ViGEmClient.lib, ViGEmClient.dll) 가 포함되어 있어야 합니다.
+### ViGEmBus 드라이버 설치 확인
+
+ViGEmBus 드라이버 설치 확인 방법은 크게 4가지가 있습니다.
+
+-   **ViGEmClient API로 직접 연결 시도 (가장 신뢰도 높음)**
+-   레지스트리 키(`SYSTEM\\CurrentControlSet\\Services\\ViGEmBus`) 여부 확인
+-   서비스 상태로 확인
+-   장치 관리자에서 "ViGEm Bus Driver"라는 장치 이름 확인
+
+#### 1. ViGEmClient API로 직접 연결 시도
+
+&nbsp; SDK 가 ViGEm 에 접근 가능한지 다이렉트하게 확인하므로 가장 신뢰도가 높은 방법입니다.
+
+```cpp
+#include <bits/stdc++.h>
+#include <windows.h>
+#include <ViGEmClient.h>
+
+using namespace std;
+
+bool isViGEmBusResponsive() {
+    // * 클라이언트 객체 생성
+    PVIGEM_CLIENT client = vigem_alloc();
+    if (client == nullptr) return false;
+
+    // * ViGEmBus 드라이버에 연결 시도
+    const auto ret = vigem_connect(client);
+
+    // * 클라이언트 객체 해제
+    vigem_disconnect(client);
+    vigem_free(client);
+
+    // * VIGEM_ERROR_NONE == ret 인지 확인
+    return VIGEM_SUCCESS(ret);
+}
+
+int main(int argc, char* argv[]) {
+    // * 드라이버 설치 여부 확인
+    if (!isViGEmBusResponsive()) cout << "[경고] ViGEmBus 드라이버가 설치되어 있지 않습니다!" << endl;
+    else cout << "[알림] ViGEmBus 드라이버가 설치되어 있습니다." << endl;
+
+    return 0;
+}
+```
+
+#### 2. 레지스트리 키 여부 확인
+
+&nbsp; `RegOpenKeyExA()` 로 ViGEmBus 설치 여부를 확인합니다.
+
+```cpp
+#include <bits/stdc++.h>
+#include <windows.h>
+#include <ViGEmClient.h>
+
+using namespace std;
+
+// * 레지스트리에서 ViGEmBus 드라이버 설치 여부 확인
+bool IsViGEmBusInstalled() {
+    HKEY hKey;
+    LONG result = RegOpenKeyExA(
+        HKEY_LOCAL_MACHINE,
+        "SYSTEM\\CurrentControlSet\\Services\\ViGEmBus",
+        0,
+        KEY_READ,
+        &hKey
+    );
+
+    if (result == ERROR_SUCCESS) {
+        // * ViGEmBus 키를 열었으니, 리소스 누수(메모리/핸들 누수)를 방지하려면 핸들을 닫아야 합니다.
+        RegCloseKey(hKey);
+        return true;
+    } else {
+        return false;
+    }
+    return true;
+}
+
+int main(int argc, char* argv[]) {
+    // * 드라이버 설치 여부 확인
+    if (!IsViGEmBusInstalled()) cout << "[경고] ViGEmBus 드라이버가 설치되어 있지 않습니다!" << endl;
+    else cout << "[알림] ViGEmBus 드라이버가 설치되어 있습니다." << endl;
+
+    return 0;
+}
+```
+
+#### 3. 서비스 동작 확인
+
+&nbsp; ViGEmBus는 SYSTEM\CurrentControlSet\Services\ViGEmBus 아래에 등록된 드라이버 서비스입니다.
+
+&nbsp; 아래처럼 서비스가 실제로 로드되어 있는지 확인할 수 있습니다.
+
+```cpp
+#include <windows.h>
+#include <iostream>
+
+bool IsViGEmBusServiceRunning()
+{
+    SC_HANDLE scm = OpenSCManager(NULL, NULL, SC_MANAGER_CONNECT);
+    if (!scm) return false;
+
+    SC_HANDLE service = OpenServiceA(scm, "ViGEmBus", SERVICE_QUERY_STATUS);
+    if (!service) {
+        CloseServiceHandle(scm);
+        return false;
+    }
+
+    SERVICE_STATUS status;
+    bool isRunning = false;
+    if (QueryServiceStatus(service, &status)) {
+        // SERVICE_RUNNING = 4
+        if (status.dwCurrentState == SERVICE_RUNNING)
+            isRunning = true;
+    }
+
+    CloseServiceHandle(service);
+    CloseServiceHandle(scm);
+
+    return isRunning;
+}
+```
+
+#### 4. 장치 관리자에서 장치 이름 확인
+
+&nbsp; ViGEmBus는 "가상 버스 드라이버"로 장치 관리자(Device Manager)에서 "ViGEm Bus Driver"라는 장치 이름으로 등록됩니다.
+&nbsp; 이 정보를 Win32 API로 확인할 수 있습니다. 이 방법은 실제 장치 드라이버가 OS에 등록되어 있어야만 true가 되므로, 레지스트리 잔여값에 속지 않습니다
+
+-   SetupDiGetClassDevsA 로 "ROOT\\ViGEmBus" 클래스의 디바이스들을 열거
+-   설치되어 있는 디바이스 목록 중 "ViGEm Bus Driver"를 찾음
+
+```cpp
+#include <windows.h>
+#include <setupapi.h>
+#include <devguid.h>
+#include <regstr.h>
+#include <iostream>
+
+#pragma comment(lib, "setupapi.lib")
+
+bool IsViGEmBusDevicePresent()
+{
+    HDEVINFO deviceInfoSet = SetupDiGetClassDevsA(
+        NULL,
+        "ROOT\\ViGEmBus",   // ViGEmBus의 PnP 경로
+        NULL,
+        DIGCF_PRESENT | DIGCF_ALLCLASSES
+    );
+
+    if (deviceInfoSet == INVALID_HANDLE_VALUE)
+        return false;
+
+    SP_DEVINFO_DATA deviceInfoData;
+    deviceInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
+
+    bool found = false;
+    DWORD i = 0;
+    while (SetupDiEnumDeviceInfo(deviceInfoSet, i++, &deviceInfoData))
+    {
+        char deviceName[256];
+        if (SetupDiGetDeviceRegistryPropertyA(
+            deviceInfoSet,
+            &deviceInfoData,
+            SPDRP_DEVICEDESC,
+            NULL,
+            (PBYTE)deviceName,
+            sizeof(deviceName),
+            NULL))
+        {
+            if (strstr(deviceName, "ViGEm Bus Driver")) {
+                found = true;
+                break;
+            }
+        }
+    }
+
+    SetupDiDestroyDeviceInfoList(deviceInfoSet);
+    return found;
+}
+```
+
+### 자동 설치 유도 코드
+
 -   `ShellExecute` 를 쓰므로 관리자 권한이 필요합니다.
 -   `ViGEmBusSetup_x64.msi` (또는 x86) 설치 파일이 프로그램 실행 파일과 같은 폴더에 있어야 합니다.
 
