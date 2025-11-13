@@ -56,8 +56,8 @@
             "detail": "내부의 cpp 파일들을 반복검색한 후 빌드합니다.",
             "type": "cppbuild",
             "group": {
-                "isDefault": true,
-                // "isDefault": false,
+                // "isDefault": true,
+                "isDefault": false,
                 "kind": "build"
             },
             "command": "@(CALL",

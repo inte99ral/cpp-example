@@ -66,7 +66,7 @@ ViGEmBus 드라이버 설치 확인 방법은 크게 4가지가 있습니다.
 -   서비스 상태로 확인
 -   장치 관리자에서 "ViGEm Bus Driver"라는 장치 이름 확인
 
-#### 1. ViGEmClient API로 직접 연결 시도
+#### 1. ViGEmClient API로 직접 연결 시도 (가장 신뢰도 높음)
 
 &nbsp; SDK 가 ViGEm 에 접근 가능한지 다이렉트하게 확인하므로 가장 신뢰도가 높은 방법입니다.
 
